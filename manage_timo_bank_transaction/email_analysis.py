@@ -10,8 +10,8 @@ from tqdm import tqdm
 import sys
 
 # Cấu hình tài khoản Gmail
-EMAIL = 'saranghae123578@gmail.com'
-APP_PASSWORD = 'jgkv yqkd vecm trxn'  # Mật khẩu ứng dụng từ Google
+EMAIL = 'email@gmail.com'
+APP_PASSWORD = '**** **** **** ****'  # Mật khẩu ứng dụng từ Google
 IMAP_SERVER = 'imap.gmail.com'
 total_in = 0
 total_out = 0
