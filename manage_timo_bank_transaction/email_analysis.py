@@ -137,14 +137,14 @@ for eid in tqdm(email_ids, desc="Processing emails", unit="email",  colour="gree
     balance_match = re.search(r'Current Balance is: ([\d,]+)', debit_or_credit_info, re.IGNORECASE)
     balance = int(balance_match.group(1).replace(",", "")) if balance_match else 0
 
-    print("====== EMAIL ======")
-    print(f"Processing email: {subject}")
-    print(f"Date: {date[:26]}")
+    # print("====== EMAIL ======")
+    # print(f"Processing email: {subject}")
+    # print(f"Date: {date[:26]}")
 
-    print(f"Body: {extracted_body}")  
-    print(f"Amount: {amount} VND")
-    print(f"Balance: {balance} VND")
-    print("===================")  # Thêm dòng này để phân cách giữa các email
+    # print(f"Body: {extracted_body}")  
+    # print(f"Amount: {amount} VND")
+    # print(f"Balance: {balance} VND")
+    # print("===================")  
     ws.append([subject,date[:26],amount,balance,txn_description])  
 
 # Lưu file Excel
