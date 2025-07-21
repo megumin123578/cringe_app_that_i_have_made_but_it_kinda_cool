@@ -1,0 +1,181 @@
+import os
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+from gspread_dataframe import set_with_dataframe
+from module import auto_concat, get_list_video  # Assuming these are correctly defined
+
+EXCEL_FILE = 'temp1.xlsx'
+CSV_FILE = 'data_spidey.csv'
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+CREDS_FILE = "sheet.json"
+SHEET_NAME = 'Auto_concat_vids_ver2'
+OUTPUT_DIR = r"D:\output_spidey"
+
+def clear_excel_file(excel_file):
+    try:
+        columns = ['input', 'first vids', 'desired length', 'output directory', 'number_of_vids', 'status']
+        empty_df = pd.DataFrame(columns=columns)
+        empty_df.to_excel(excel_file, index=False, engine='openpyxl')
+        print(f"Cleared existing content in Excel file: {excel_file}")
+    except Exception as e:
+        print(f"Error clearing Excel file '{excel_file}': {e}")
+
+def copy_from_ggsheet_to_excel(gspread_client, sheet_name, excel_file, idx):
+    try:
+        spreadsheet = gspread_client.open(sheet_name)
+        worksheet = spreadsheet.get_worksheet(idx)
+        data = worksheet.get_all_values()
+
+        if not data:
+            print("Google Sheet is empty!")
+            return
+
+        columns = data[0]
+        values = data[1:]
+        df = pd.DataFrame(values, columns=columns)
+        clear_excel_file(excel_file)
+        df.to_excel(excel_file, index=False, engine='openpyxl')
+        print(f"Successfully copied data from Google Sheet '{sheet_name}' to Excel file '{excel_file}'")
+    except Exception as e:
+        print(f"Error copying data from Google Sheet to Excel: {e}")
+
+def pre_process_data(file):
+    try:
+        df = pd.read_excel(file)
+        required_columns = ['input', 'status']
+        if not all(col in df.columns for col in required_columns):
+            missing = [col for col in required_columns if col not in df.columns]
+            raise ValueError(f"Missing required columns in Excel file: {missing}")
+        filtered_df = df[
+            df['input'].notna() &
+            df['status'].str.lower().eq('auto')
+        ]
+        return filtered_df, df
+    except Exception as e:
+        print(f"Error in pre_process_data: {e}")
+        return pd.DataFrame(), pd.DataFrame()
+
+def excel_to_sheet(excel_file: str, sheet_name: str, gspread_client, idx=2):
+    try:
+        spreadsheet = gspread_client.open(sheet_name)
+        worksheet = spreadsheet.get_worksheet(idx)
+        df = pd.read_excel(excel_file)
+        worksheet.clear()
+        set_with_dataframe(worksheet, df, include_index=False, include_column_header=True, resize=True)
+        print(f"Uploaded Excel -> Google Sheet '{sheet_name}'.")
+    except Exception as e:
+        print(f"excel_to_sheet error: {e}")
+
+def main(worksheet_idx=2):
+    # --- Chuẩn bị môi trường ---
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    if not os.path.exists(CSV_FILE):
+        print(f"CSV file '{CSV_FILE}' không tồn tại. Thoát.")
+        return
+
+    # --- Auth Google & tải sheet về Excel ---
+    try:
+        creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+        gc = gspread.authorize(creds)
+    except Exception as e:
+        print(f"Lỗi xác thực Google: {e}")
+        return
+
+    try:
+        copy_from_ggsheet_to_excel(gc, SHEET_NAME, EXCEL_FILE, worksheet_idx)
+    except Exception as e:
+        print(f"Lỗi tải sheet về Excel: {e}")
+        return
+
+    # --- Đọc & lọc dữ liệu cần xử lý ---
+    suitable_df, original_df = pre_process_data(EXCEL_FILE)
+    if suitable_df.empty:
+        print("Không có hàng nào status='auto' và input hợp lệ. Kết thúc.")
+        return
+
+    # Đảm bảo các cột cần ghi có tồn tại
+    if 'output directory' not in original_df.columns:
+        original_df['output directory'] = ""
+    if 'number_of_vids' not in original_df.columns:
+        original_df['number_of_vids'] = ""
+    if 'status' not in original_df.columns:
+        original_df['status'] = ""
+
+    # --- Tạo danh sách job ---
+    jobs = []
+    for idx, row in suitable_df.iterrows():
+        stt_string = str(row['input']).strip()
+        if not stt_string:
+            continue
+
+        print(f"Processing row {idx}: {row.to_dict()}")
+
+        paths = get_list_video(stt_string, CSV_FILE)  # list[str]
+        if not paths:
+            print(f"Row {idx}: không tìm thấy file hợp lệ trong CSV.")
+            original_df.at[idx, 'status'] = 'Error'
+            continue
+
+        if 'first vids' in suitable_df.columns:
+            base_name = str(row['first vids']).strip()
+        else:
+            base_name = ""
+
+        if not base_name or base_name.lower() == 'nan':
+            base_name = f"group_{idx}"
+
+        # Làm sạch tên file (loại ký tự không hợp lệ Windows)
+        safe_base_name = "".join(c for c in base_name if c not in r'\/:*?"<>|').strip() or f"group_{idx}"
+
+        output_path = os.path.join(OUTPUT_DIR, f"{safe_base_name}_Spidey_ghep.mp4")
+
+        jobs.append({
+            "group_index": idx,          # index trong original_df
+            "name": safe_base_name,
+            "selected_files": paths,
+            "output_path": output_path,
+        })
+
+    if not jobs:
+        print("Không có job hợp lệ để xử lý. Kết thúc.")
+        return
+
+    # --- Ghép video & cập nhật DataFrame ---
+    for job in jobs:
+        print(f"Concatenating {len(job['selected_files'])} video(s) for row {job['group_index']} -> {job['output_path']}")
+        ok = auto_concat(job['selected_files'], job['output_path'])
+
+        row_index = job['group_index']
+        if not ok:
+            print(f"Concat FAILED cho row {row_index}.")
+            original_df.at[row_index, 'status'] = 'Error'
+            original_df.at[row_index, 'number_of_vids'] = 0
+            continue
+
+        current_value = original_df.at[row_index, 'output directory']
+        if pd.isna(current_value) or str(current_value).strip().lower() in ('nan', ''):
+            new_val = job['output_path']
+        else:
+            new_val = f"{current_value}\n{job['output_path']}"
+
+        original_df.at[row_index, 'output directory'] = new_val
+        original_df.at[row_index, 'status'] = 'Done'
+        original_df.at[row_index, 'number_of_vids'] = 1
+
+    # --- Lưu Excel & đẩy ngược lên Google Sheet ---
+    try:
+        original_df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
+        print(f"Đã lưu Excel: {EXCEL_FILE}")
+        excel_to_sheet(EXCEL_FILE, SHEET_NAME, gc, idx=worksheet_idx)
+        print("Đã cập nhật Google Sheet.")
+    except Exception as e:
+        print(f"Lỗi khi lưu hoặc cập nhật Google Sheet: {e}")
+
+
+if __name__ == '__main__':
+    main()
