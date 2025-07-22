@@ -3,7 +3,7 @@ import webbrowser
 import time
 import os
 import pyperclip
-
+from pywinauto import Application
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -291,25 +291,30 @@ def main():
             
 
 
-            #use open cv to locate button for monetization
             location = pyautogui.locateOnScreen('monetization_select.png', confidence=0.8)
-            center = pyautogui.center(location)
-            pyautogui.click(center)  
-            
+            if location:
+                center = pyautogui.center(location)
+                pyautogui.moveTo(center, duration=0.5, tween=pyautogui.easeInOutQuad)  # Di chuyển chậm 0.5 giây
+                pyautogui.click()
+                time.sleep(0.3)  # Chờ một chút để UI phản hồi
 
-            if monetization:
-                location = pyautogui.locateOnScreen('on_monetization.png', confidence=0.8)     
-                center = pyautogui.center(location)
-                pyautogui.click(center)  
-     
-            else:
-                location = pyautogui.locateOnScreen('off_monetization.png', confidence=0.8)     
-                center = pyautogui.center(location)
-                pyautogui.click(center)  
-            #confirm monetization
-            location = pyautogui.locateOnScreen('confirm_monetization.png', confidence=0.8)     
-            center = pyautogui.center(location)
-            pyautogui.click(center)  
+                if monetization:
+                    location = pyautogui.locateOnScreen('on_monetization.png', confidence=0.8)
+                else:
+                    location = pyautogui.locateOnScreen('off_monetization.png', confidence=0.8)
+
+                if location:
+                    center = pyautogui.center(location)
+                    pyautogui.moveTo(center, duration=0.5, tween=pyautogui.easeInOutQuad)
+                    pyautogui.click()
+                    time.sleep(0.3)
+
+                # confirm monetization
+                location = pyautogui.locateOnScreen('confirm_monetization.png', confidence=0.8)
+                if location:
+                    center = pyautogui.center(location)
+                    pyautogui.moveTo(center, duration=0.5, tween=pyautogui.easeInOutQuad)
+                    pyautogui.click()
 
             #move to next step
             x,y = 1390,960
@@ -318,43 +323,67 @@ def main():
             pyautogui.click()
             
 
-            
+            #video cho trẻ em
             if for_kids: #dont have endscreen
-                x,y = 1390,955
-                print(f'Move to {x,y}')
-                pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
-                pyautogui.click()
-                time.sleep(1)
-                pyautogui.click()
+                if monetization:
+                    print(f'Move to {scroll_bar_x,scroll_bar_y}')
+                    pyautogui.moveTo(scroll_bar_x, scroll_bar_y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.mouseDown()
+                    
+                    time.sleep(1)
+                    print(f'Move to {scroll_bar_x,1025 + distance}')
+                    pyautogui.moveTo(scroll_bar_x, 1025 + distance, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.mouseUp()
 
-            # if monetization:
-            #     print(f'Move to {scroll_bar_x,scroll_bar_y}')
-            #     pyautogui.moveTo(scroll_bar_x, scroll_bar_y, duration=0.3, tween=pyautogui.easeInOutQuad) 
-            #     pyautogui.mouseDown()
+                    x,y = 545,768
+                    print(f'Move to {x,y}')
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+
+                    x,y = 1200,770
+                    print(f'Move to {x,y}')
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+                    time.sleep(3)
+                    #next step
+                    x,y = 1385,960
+                    print(f'Move to {x,y}')
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+
+                elif not monetization:
+                    x,y = 1390,955
+                    print(f'Move to {x,y}')
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+                    time.sleep(1)
+                    pyautogui.click()
+
                 
-            #     time.sleep(1)
-            #     print(f'Move to {scroll_bar_x,1025 + distance}')
-            #     pyautogui.moveTo(scroll_bar_x, 1025 + distance, duration=0.3, tween=pyautogui.easeInOutQuad) 
-            #     pyautogui.mouseUp()
 
-            #     x,y = 545,768
-            #     print(f'Move to {x,y}')
-            #     pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
-            #     pyautogui.click()
-
-            #     x,y = 1200,770
-            #     print(f'Move to {x,y}')
-            #     pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
-            #     pyautogui.click()
-            #     time.sleep(3)
-            #     #next step
-            #     x,y = 1385,960
-            #     print(f'Move to {x,y}')
-            #     pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
-            #     pyautogui.click()
-
-
+            #video không cho trẻ em
             elif not for_kids: #nếu không cho trẻ em thì thêm endscreen
+                if monetization == True:
+                    x,y = 1435,435
+                    print(f'Move to {x,y}')
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.mouseDown()
+                    pyautogui.moveTo(x, y+600, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.mouseUp()
+
+                    x,y = 544,882
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+                    x,y = 1195,458 #gửi thông tin đánh giá
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+                    random_delay(3, 5)
+
+                    x,y = 1388,952 
+                    pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
+                    pyautogui.click()
+                
+                #add endscreen
                 x,y = 1345,545
                 print(f'Move to {x,y}')
                 pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
@@ -395,8 +424,6 @@ def main():
                 print(f'Move to {x,y}')
                 pyautogui.moveTo(x, y, duration=0.3, tween=pyautogui.easeInOutQuad) 
                 pyautogui.click()
-
-
 
             #public stattus
 
@@ -463,7 +490,7 @@ def main():
         except Exception as e:
             print(f"Lỗi xảy ra: {e}")
 
-        #update excel
+       
 
         #update sheet
         
