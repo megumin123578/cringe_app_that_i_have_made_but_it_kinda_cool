@@ -8,14 +8,14 @@ from module import auto_concat, find_first_vid, excel_to_sheet, get_file_name
 
 
 EXCEL_FILE = 'temp.xlsx'
-CSV_FILE = r"C:\Users\Admin\Documents\main\Tuan_number\csv_data\tuan_thomas.csv"  # Source for additional videos
+CSV_FILE = r"C:\Users\Admin\Documents\main\Tuan_number\csv_data\tuan_number_data.csv"  # Source for additional videos
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 CREDS_FILE = "sheet.json"  
 SHEET_NAME = 'Auto_concat_vids'  
-OUTPUT_DIR = r'F:\ouput\output_number'
+OUTPUT_DIR = r'F:\ouput\OUTPUT Number Tuấn'
 MAX_AGE_SECONDS = 55 * 24 * 60 * 60  * 0 
 USED_LOG_FILE = r"C:\Users\Admin\Documents\main\Tuan_number\log_data\tuan_number_used.log"
 

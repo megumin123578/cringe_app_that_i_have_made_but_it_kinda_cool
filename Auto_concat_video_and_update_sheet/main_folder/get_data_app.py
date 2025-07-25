@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings("ignore", message="Subtitle stream parsing is not supported by moviepy")
 
 # Constants
-OUTPUT_FILE = 'tuan_thomas.csv'
+OUTPUT_FILE = 'show_asmr.csv'
 VIDEO_EXTENSIONS = {'.mp4', '.avi', '.mkv', '.mov'}
 
 def get_file_list(folder_path, extensions=None):

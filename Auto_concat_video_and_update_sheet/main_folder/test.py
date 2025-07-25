@@ -4,20 +4,20 @@ import random
 import os
 import gspread
 from google.oauth2.service_account import Credentials
-from module import auto_concat, find_first_vid, excel_to_sheet, get_file_name
+from module2 import auto_concat, find_first_vid, excel_to_sheet, get_file_name
 
 
-EXCEL_FILE = 'temp.xlsx'
-CSV_FILE = 'tuan_number_data.csv'  # Source for additional videos
+EXCEL_FILE = 'temp_upload.xlsx'
+CSV_FILE = r"C:\Users\Admin\Documents\main\Tuan_number\csv_data\show_asmr_data.csv"  # Source for additional videos
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 CREDS_FILE = "sheet.json"  
 SHEET_NAME = 'Auto_concat_vids'  
-OUTPUT_DIR = r'F:\OUTPUT Number Tuấn'
+OUTPUT_DIR = r'F:\test'
 MAX_AGE_SECONDS = 55 * 24 * 60 * 60  * 0 
-USED_LOG_FILE = 'used_videos.log'
+USED_LOG_FILE = 'test.log'
 
 
 def load_used_videos():
@@ -44,7 +44,7 @@ def clear_excel_file(excel_file):
 def copy_from_ggsheet_to_excel(gspread_client, sheet_name, excel_file):
     try:
         spreadsheet = gspread_client.open(sheet_name)
-        worksheet = spreadsheet.get_worksheet(1)
+        worksheet = spreadsheet.get_worksheet(7)
         data = worksheet.get_all_values()
 
         if not data:
@@ -72,6 +72,8 @@ def pre_process_data(file):
 
 def convert_time_to_seconds(time_str):
     try:
+        if pd.isna(time_str):
+            return 0
         if isinstance(time_str, (int, float)):
             return float(time_str)
         parts = time_str.strip().split(':')
@@ -155,20 +157,8 @@ def format_and_print_results(results):
             print("  ", f)
     
 def main():
-    USED_LOG_FILE = 'used_videos.log'
 
-    def load_used_videos():
-        if os.path.exists(USED_LOG_FILE):
-            with open(USED_LOG_FILE, 'r', encoding='utf-8') as f:
-                return set(line.strip() for line in f if line.strip())
-        return set()
 
-    def save_used_videos(used_set):
-        with open(USED_LOG_FILE, 'w', encoding='utf-8') as f:
-            for path in used_set:
-                f.write(f"{path}\n")
-
-    
     try:
         creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
         gc = gspread.authorize(creds)
@@ -278,7 +268,7 @@ def main():
             original_df = original_df.drop(columns=['number_of_vids'])
         original_df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
         print("Saved all Excel content into Excel file")
-        excel_to_sheet(EXCEL_FILE, SHEET_NAME,1)
+        excel_to_sheet(EXCEL_FILE, SHEET_NAME,7)
         print("Updated Google Sheet.")
     except Exception as e:
         print(f"Error: {e}")

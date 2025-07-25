@@ -8,7 +8,7 @@ from module import auto_concat, find_first_vid, excel_to_sheet, get_file_name
 
 
 EXCEL_FILE = 'temp.xlsx'
-CSV_FILE = 'show_asmr_data.csv'  # Source for additional videos
+CSV_FILE = r"C:\Users\Admin\Documents\main\Tuan_number\csv_data\show_asmr_data.csv"  # Source for additional videos
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -17,7 +17,7 @@ CREDS_FILE = "sheet.json"
 SHEET_NAME = 'Auto_concat_vids'  
 OUTPUT_DIR = r'F:\ouput\output_show_asmr'
 MAX_AGE_SECONDS = 55 * 24 * 60 * 60  * 0 
-USED_LOG_FILE = 'test.log'
+USED_LOG_FILE = r"C:\Users\Admin\Documents\main\Tuan_number\log_data\show_asmr_used.log"
 
 
 def load_used_videos():
@@ -44,7 +44,7 @@ def clear_excel_file(excel_file):
 def copy_from_ggsheet_to_excel(gspread_client, sheet_name, excel_file):
     try:
         spreadsheet = gspread_client.open(sheet_name)
-        worksheet = spreadsheet.get_worksheet(3)
+        worksheet = spreadsheet.get_worksheet(6)
         data = worksheet.get_all_values()
 
         if not data:
@@ -72,6 +72,8 @@ def pre_process_data(file):
 
 def convert_time_to_seconds(time_str):
     try:
+        if pd.isna(time_str):
+            return 0
         if isinstance(time_str, (int, float)):
             return float(time_str)
         parts = time_str.strip().split(':')
@@ -86,6 +88,7 @@ def convert_time_to_seconds(time_str):
             return 0
     except:
         return 0
+
 
 def prepare_original_data():
     try:
@@ -106,6 +109,8 @@ def prepare_original_data():
 
 def generate_video_lists(suitable_df, durations, last_used, file_paths):
     results = []
+    used_global_indexes = set()  # Theo dõi các video đã được chọn trên mọi list
+
     for i in range(len(suitable_df)):
         num_lists = 1  # Force number_of_vids to 1
         desired_length = float(suitable_df.iloc[i]['desired length']) * 60
@@ -117,10 +122,19 @@ def generate_video_lists(suitable_df, durations, last_used, file_paths):
             print(f"Không tìm thấy video đầu tiên cho {first_vid_number}")
             continue
 
+        try:
+            first_index = file_paths.index(first_path)
+        except ValueError:
+            print(f"Không tìm thấy first_path trong danh sách file_paths: {first_path}")
+            continue
+
+        used_global_indexes.add(first_index)  # Đánh dấu first_path đã dùng
+
         for list_index in range(num_lists):
+            # Chỉ chọn các video chưa từng được chọn trước đó và chưa bị giới hạn last_used
             available_indexes = [
                 idx for idx in range(len(file_paths))
-                if last_used[idx] >= MAX_AGE_SECONDS
+                if last_used[idx] >= MAX_AGE_SECONDS and idx not in used_global_indexes
             ]
 
             total_duration = first_duration
@@ -132,6 +146,7 @@ def generate_video_lists(suitable_df, durations, last_used, file_paths):
                 total_duration += durations[chosen_index]
                 selected_indexes.append(chosen_index)
                 selected_paths.append(file_paths[chosen_index])
+                used_global_indexes.add(chosen_index)  # Đánh dấu đã dùng
                 available_indexes.remove(chosen_index)
 
             results.append({
@@ -143,6 +158,7 @@ def generate_video_lists(suitable_df, durations, last_used, file_paths):
             })
 
     return results
+
 
 def format_and_print_results(results):
     for item in results:
@@ -261,6 +277,7 @@ def main():
 
         filename = "video_edited.mp4"
         output_path = os.path.join(full_folder_path, filename)
+        
         auto_concat(ls['selected_files'], output_path)
 
         group_index = ls['group_index']
@@ -275,13 +292,13 @@ def main():
         original_df.at[row_index, 'status'] = 'Done'
         original_df.at[row_index, 'number_of_vids'] = 1
 
-    #Lưu file Excel & cập nhật Google Sheet
+    #save data and upload to ggsheets
     try:
         if 'number_of_vids' in original_df.columns:
             original_df = original_df.drop(columns=['number_of_vids'])
         original_df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
         print("Saved all Excel content into Excel file")
-        excel_to_sheet(EXCEL_FILE, SHEET_NAME,3)
+        excel_to_sheet(EXCEL_FILE, SHEET_NAME,6)
         print("Updated Google Sheet.")
     except Exception as e:
         print(f"Error: {e}")
